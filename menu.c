@@ -8,7 +8,8 @@ void item_output(int  row_number, char* text, HANDLE handle, WORD color) {
 }
 
 void item_activate(int row_number, char* text, HANDLE handle) {
-    item_output(row_number, text, handle, BACKGROUND_GREEN | BACKGROUND_INTENSITY | FOREGROUND_RED);
+    item_output(row_number, text, handle,
+        BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_INTENSITY | FOREGROUND_GREEN);
 }
 
 void item_hide(int row_number, char* text, HANDLE handle) {
