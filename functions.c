@@ -28,39 +28,27 @@ int input_int(char query[50]) {
 }
 
 void caesar_cipher(char* text, int move, int direction) {
+    const char* rus_up = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
+    const char* rus_low = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
+    int rus_size = 33;
     for (int i = 0; text[i] != '\0'; i++) {
-
-        unsigned char c1 = (unsigned char)text[i];
-        if (c1 == 0xD0 && (unsigned char)text[i + 1] == 0x81) {
-            text[i] = (char)0xD0; text[i + 1] = (char)0x95;
+        if ((text[i] >= 'A' && text[i] <= 'Z') || (text[i] >= 'a' && text[i] <= 'z')) {
+            char start = (text[i] >= 'a') ? 'a' : 'A';
+            int shift = (direction == 2) ? (26 - (move % 26)) : (move % 26);
+            text[i] = start + (text[i] - start + shift) % 26;
         }
-        else if (c1 == 0xD1 && (unsigned char)text[i + 1] == 0x91) {
-            text[i] = (char)0xD0; text[i + 1] = (char)0xB5;
-            c1 = 0xD0;
-        }
-        if ((c1 >= 'A' && c1 <= 'Z') || (c1 >= 'a' && c1 <= 'z')) {
-            unsigned char start = (c1 >= 'a') ? 'a' : 'A';
-            int size = 26;
-            int shift = (direction == 2) ? (size - (move % size)) : (move % size);
-            text[i] = start + (c1 - start + shift) % size;
-        }
-        else if (c1 == 0xD0 || c1 == 0xD1) {
-            unsigned char c2 = (unsigned char)text[i + 1];
-            int unicode_code = ((c1 & 0x1F) << 6) | (c2 & 0x3F);
-            int start = 0, size = 32;
-
-            if (unicode_code >= 0x0410 && unicode_code <= 0x042F) {
-                start = 0x0410;
-            }
-            else if (unicode_code >= 0x0430 && unicode_code <= 0x044F) {
-                start = 0x0430;
-            }
-
-            if (start > 0) {
-                int shift = (direction == 2) ? (size - (move % size)) : (move % size);
-                int new_code = start + (unicode_code - start + shift) % size;
-                text[i] = (char)(0xD0 | (new_code >> 6));
-                text[i + 1] = (char)(0x80 | (new_code & 0x3F));
+        else if ((unsigned char)text[i] == 0xD0 || (unsigned char)text[i] == 0xD1) {
+            char current_char[3] = { text[i], text[i + 1], '\0' };
+            char* p;
+            int pos = -1;
+            if ((p = strstr(rus_up, current_char))) pos = (p - rus_up) / 2;
+            else if ((p = strstr(rus_low, current_char))) pos = (p - rus_low) / 2;
+            if (pos != -1) {
+                int shift = (direction == 2) ? (rus_size - (move % rus_size)) : (move % rus_size);
+                int new_pos = (pos + shift) % rus_size;
+                const char* target_alpha = (p >= rus_low) ? rus_low : rus_up;
+                text[i] = target_alpha[new_pos * 2];
+                text[i + 1] = target_alpha[new_pos * 2 + 1];
                 i++;
             }
         }
@@ -76,21 +64,24 @@ void file_chipher() {
     fseek(fPtr, 0, SEEK_END);
     int fileSize = ftell(fPtr);
     rewind(fPtr);
+    if (fileSize <= 0) {
+        puts("Ошибка: Файл input.txt пуст!");
+        fclose(fPtr);
+        return;
+    }
     char* buffer = malloc(fileSize + 1);
     size_t bytesRead = fread(buffer, 1, fileSize, fPtr);
     buffer[bytesRead] = '\0';
     fclose(fPtr);
-    int move = input_int("Введите сдвиг для файла:");
     int direction = 0;
     while (direction < 1 || direction>2) {
-        direction = input_int("Направление (1-Право, 2-Лево):");
+        direction = input_int("Процедура: \n [1]-Шифрование\n [2]-Дешифрование \n");
         if (direction < 1 || direction>2) {
-            puts("\nОшибка! Сдвиг может приниимать только значения 1 или 2!\n");
-        }
-       
-    } 
+            puts("\nОшибка!\n");
+        }  
+    }
+    int move = input_int("Введите ключ шифрования (смещение):  ");
     caesar_cipher(buffer, move, direction);
-
     FILE* outPtr = fopen("output.txt", "w");
     if (outPtr != NULL) {
         fputs(buffer, outPtr);
@@ -107,21 +98,31 @@ void work() {
     printf("Введите ваш текст: ");
     fgets(text, sizeof(text), stdin);
     text[strcspn(text, "\n")] = 0;
-    int move = input_int("Введите сдвиг: ");
-    int direction = input_int("Направление (1-Право, 2-Лево): ");
-    printf("РЕЗУЛЬТАТ: %s ------->",text);
+    int direction = 0;
+    while (direction < 1 || direction>2) {
+         direction = input_int("Процедура: \n [1]-Шифрование\n [2]-Дешифрование \n");
+        if (direction < 1 || direction>2) {
+            puts("\nОшибка!\n");
+        }
+
+    }
+    int move = input_int("Введите ключ шифрования (смещение): ");
+    printf("РЕЗУЛЬТАТ:\n %s ===> ",text);
     caesar_cipher(text, move, direction);
     printf("%s\n", text);
 }
 void about_cipher() {
     system("cls");
-    printf("\n\n   _____                         \n");
-    printf("  / ____|                        \n");
-    printf(" | |     ___  ___  __ _ _ __     \n");
-    printf(" | |    / _ \\/ __|/ _` | '__|    \n");
-    printf(" | |___|  __/\\__ \\ (_| | |       \n");
-    printf("  \\_____\\___||___/\\__,_|_|       \n\n");
-    printf("=====================================\n");
+    printf("\n\n\t\t\t\t======================================================================\n");
+    printf("\t\t\t\t||   _____                            ____  _       _               ||\n");
+    printf("\t\t\t\t||  / ____|                         / ____|(_)     | |              ||\n");
+    printf("\t\t\t\t|| | |     ___  ___  __ _ _ __     | |      _ _ __ | |__   ___ _ __ ||\n");
+    printf("\t\t\t\t|| | |    / _ \\/ __|/ _` | '__|    | |     | | '_ \\| '_ \\ / _ \\ '__|||\n");
+    printf("\t\t\t\t|| | |___|  __/\\__ \\ (_| | |       | |____ | | |_) | | | |  __/ |   ||\n");
+    printf("\t\t\t\t||  \\_____\\___||___/\\__,_|_|        \\_____||_| .__/|_| |_|\\___|_|   ||\n");
+    printf("\t\t\t\t||                                           | |                    ||\n");
+    printf("\t\t\t\t||                                           |_|                    ||\n");
+    printf("\t\t\t\t======================================================================\n\n\n");
     printf("Шифр Цезаря — это один из самых простых\n");
     printf("и известных методов шифрования.\n\n");
     printf("Он работает путем сдвига букв алфавита\n");
